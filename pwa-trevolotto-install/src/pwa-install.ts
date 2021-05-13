@@ -10,34 +10,28 @@ interface ManifestData {
 }
 
 @customElement("pwa-install")
-export class pwainstall extends LitElement implements PWAInstallComponent {
+export class pwainstall extends LitElement {
   @property({ type: String }) manifestpath: string = "manifest.json";
-  @property({ type: String }) iconpath: string = "";
-  @property({ type: Object }) manifestdata: ManifestData = {
-    name: "",
-    short_name: "",
-    description: "",
-    icons: [],
-    screenshots: [],
-    features: []
-  };
+  @property({ type: String }) iconpath: string;
+  @property({ type: Object }) manifestdata: ManifestData;
 
   @property({ type: Boolean }) openmodal: boolean = false;
+  @property({ type: Boolean }) showopen: boolean;
   @property({ type: Boolean }) isSupportingBrowser: boolean;
   @property({ type: Boolean }) isIOS: boolean;
   @property({ type: Boolean }) installed: boolean;
   @property({ type: Boolean }) hasprompt: boolean = false;
-  @property({ type: Boolean }) usecustom: boolean = false;
+  @property({ type: Boolean }) usecustom: boolean;
   @property({ type: Array }) relatedApps: any[] = [];
 
   @property({ type: String }) explainer: string =
-    "Este aplicativo pode ser instalado em seu PC ou dispositivo móvel. Isso permitirá que este aplicativo da web se pareça e se comporte como qualquer outro aplicativo instalado. Você o encontrará em suas listas de aplicativos e poderá fixá-lo em sua tela inicial, menus de início ou barras de tarefas. Este aplicativo da web instalado também será capaz de interagir com segurança com outros aplicativos e seu sistema operacional.";
+    "This app can be installed on your PC or mobile device.  This will allow this web app to look and behave like any other installed app.  You will find it in your app lists and be able to pin it to your home screen, start menus or task bars.  This installed web app will also be able to safely interact with other apps and your operating system. ";
   @property({ type: String }) featuresheader: string = "Key Features";
-  @property({ type: String }) descriptionheader: string = "Descrição";
-  @property({ type: String }) installbuttontext: string = "Instalar";
-  @property({ type: String }) cancelbuttontext: string = "Cancelar";
+  @property({ type: String }) descriptionheader: string = "Description";
+  @property({ type: String }) installbuttontext: string = "Install";
+  @property({ type: String }) cancelbuttontext: string = "Cancel";
   @property({ type: String }) iosinstallinfotext: string =
-    "Toque no botão compartilhar e selecione 'Tela de Início'";
+    "Tap the share button and then 'Add to Homescreen'";
 
   @property() deferredprompt: any;
 
@@ -603,7 +597,7 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
       navigator.userAgent.includes("iPhone") ||
       navigator.userAgent.includes("iPad") ||
       (navigator.userAgent.includes("Macintosh") &&
-        typeof navigator.maxTouchPoints === "number" &&
+        navigator.maxTouchPoints &&
         navigator.maxTouchPoints > 2);
 
     this.installed = false;
@@ -636,7 +630,7 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
     }
   }
 
-  handleInstallPromptEvent(event: Event): void {
+  handleInstallPromptEvent(event): void {
     this.deferredprompt = event;
 
     this.hasprompt = true;
@@ -646,7 +640,7 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
 
   // Check that the manifest has our 3 required properties
   // If not console an error to the user and return
-  checkManifest(manifestData: ManifestData): void {
+  checkManifest(manifestData): void {
     if (!manifestData.icons || !manifestData.icons[0]) {
       console.error("Your web manifest must have atleast one icon listed");
       return;
@@ -663,7 +657,7 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
     }
   }
 
-  async getManifestData(): Promise<ManifestData | null> {
+  async getManifestData(): Promise<ManifestData> {
     try {
       const response = await fetch(this.manifestpath);
       const data = await response.json();
@@ -676,15 +670,14 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
         return data;
       }
     } catch (err) {
+      return null;
     }
-
-    return null;
   }
 
   scrollToLeft(): void {
-    const screenshotsDiv = this.shadowRoot?.querySelector("#screenshots");
+    const screenshotsDiv = this.shadowRoot.querySelector("#screenshots");
     // screenshotsDiv.scrollBy(-10, 0);
-    screenshotsDiv?.scrollBy({
+    screenshotsDiv.scrollBy({
       // left: -15,
       left: -screenshotsDiv.clientWidth,
       top: 0,
@@ -693,9 +686,9 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
   }
 
   scrollToRight(): void {
-    const screenshotsDiv = this.shadowRoot?.querySelector("#screenshots");
+    const screenshotsDiv = this.shadowRoot.querySelector("#screenshots");
     // screenshotsDiv.scrollBy(10, 0);
-    screenshotsDiv?.scrollBy({
+    screenshotsDiv.scrollBy({
       // left: 15,
       left: screenshotsDiv.clientWidth,
       top: 0,
@@ -708,9 +701,6 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
 
     let event = new CustomEvent("show");
     this.dispatchEvent(event);
-    this.updateComplete.then(() => {
-      (this.shadowRoot?.querySelector("#closeButton") as HTMLElement)?.focus()
-    });
   }
 
   public closePrompt(): void {
@@ -760,10 +750,12 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
 
         let event = new CustomEvent("hide");
         this.dispatchEvent(event);
-      }
-    }
 
-    return false;
+        return false;
+      }
+    } else {
+      // handle else case
+    }
   }
 
   public getInstalledStatus(): boolean {
@@ -793,10 +785,6 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
     });
   }
 
-  focusOut() {
-    console.log("focus out");
-  }
-
   render() {
     return html`
       ${("standalone" in navigator &&
@@ -816,7 +804,7 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
         : null}
       ${this.openmodal === true
         ? html`
-          <dialog id="installModalWrapper">
+          <div id="installModalWrapper">
           ${
             this.openmodal
               ? html`<div
@@ -941,7 +929,7 @@ export class pwainstall extends LitElement implements PWAInstallComponent {
                 </button>`
           }
         </div>
-        </dialog>`
+          </div>`
             : html`<p id="iosText">${this.iosinstallinfotext}</p>`
         }
         `
